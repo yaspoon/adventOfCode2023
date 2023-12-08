@@ -32,6 +32,32 @@ fn check_end_condition(nodes: &Vec<&str>) -> bool {
 }
 */
 
+fn greatest_common_divisor(first: usize, second: usize) -> usize {
+    let (mut a, mut b) = if first > second {
+        (first, second)
+    } else {
+        (second, first)
+    };
+
+    'end: loop {
+        let r = a % b;
+        if r == 0 {
+            break 'end;
+        } else {
+            a = b;
+            b = r;
+        }
+    }
+
+    println!("first:{} second:{} gcd:{}", first, second, b);
+    b
+    
+}
+
+fn least_common_multiple(a: usize, b: usize) -> usize {
+    (a * b) / greatest_common_divisor(a, b)
+}
+
 fn check_end_condition(done_steps: &Vec<usize>, numerator: usize) -> bool {
     let matching = done_steps.iter().filter(|n| numerator % *n == 0).count();
     matching == done_steps.len()
@@ -102,12 +128,24 @@ fn main() {
         done_steps.push(steps);
     }
 
-    println!("done_steps:{:?}", done_steps);
+    while done_steps.len() > 1 {
+        println!("done_steps:{:?}", done_steps);
+        done_steps = done_steps[..].chunks(2).map(|d| {
+            if d.len() == 2 {
+                least_common_multiple(d[0], d[1])
+            } else {
+                d[0]
+            }
+        }).collect();
+    }
 
+    /*
     let mut count = 1;
     while !check_end_condition(&done_steps, done_steps[0] * count) {
         count += 1;
     }
+    */
 
-    println!("Steps:{}", count * done_steps[0]);
+    //println!("Steps:{}", count * done_steps[0]);
+    println!("Steps:{}", done_steps[0]);
 }
