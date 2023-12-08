@@ -19,6 +19,7 @@ fn get_starting_nodes<'a>(nodes: &HashMap<&'a str, (&str, &str)>) -> Vec<&'a str
     nodes.keys().filter(|n| n.chars().last().unwrap() == 'A').map(|n| *n).collect()
 }
 
+/*
 fn check_end_condition(nodes: &Vec<&str>) -> bool {
     let total = nodes.len();
     let ending_in_z = nodes.iter().filter(|n| n.chars().last().unwrap() == 'Z').count();
@@ -29,10 +30,21 @@ fn check_end_condition(nodes: &Vec<&str>) -> bool {
         false
     }
 }
+*/
+
+fn check_end_condition(done_steps: &Vec<usize>, numerator: usize) -> bool {
+    let matching = done_steps.iter().filter(|n| numerator % *n == 0).count();
+    matching == done_steps.len()
+
+}
+
+fn ends_in_z(node: &str) -> bool {
+    node.chars().last().unwrap() == 'Z'
+}
 
 fn main() {
-    let path = Path::new("sample_input");
-    //let path = Path::new("input");
+    //let path = Path::new("sample_input");
+    let path = Path::new("input");
 
     let mut file = match File::open(path) {
         Ok(f) => f,
@@ -54,51 +66,48 @@ fn main() {
 
     let mut cur_state: Vec<&str> = get_starting_nodes(&nodes);
     println!("cur_state:{:?}", cur_state);
-    let mut instruction_index = 0;
-    let mut steps = 0;
+    //let mut instruction_index = 0;
+    //let mut steps = 0;
     let mut done_steps: Vec<usize> = Vec::new();
-    for _ in 0..cur_state.len() {
-        done_steps.push(0);
-    }
+    for i in 0..cur_state.len() {
+        let mut steps = 0;
+        let mut instruction_index = 0;
+        let mut cur = cur_state[i];
+        while !ends_in_z(cur) {
+            steps += 1;
+            let instruction = instructions.get(instruction_index).unwrap();
+            instruction_index += 1;
+            if instruction_index >= instructions.len() {
+                instruction_index = 0;
+            }
 
-    while !check_end_condition(&cur_state) {
-        steps += 1;
-        println!("step:{}", steps);
-        let instruction = instructions.get(instruction_index).unwrap();
-        instruction_index += 1;
-        if instruction_index >= instructions.len() {
-            instruction_index = 0;
-        }
-
-        for cur_index in 0..cur_state.len() {
-            let cur = cur_state[cur_index];
             let (left, right) = match nodes.get(cur) {
                 Some(n) => n,
                 None => panic!("No such node:{}", cur),
             };
 
-            if cur.chars().last().unwrap() != 'Z' {
-                match instruction {
-                    'L' => {
-                        cur_state[cur_index] = left;
-                        //println!("left:{}", cur_state[cur_index]);
-                    },
-                    'R' => {
-                        cur_state[cur_index] = right;
-                        //println!("right:{}", cur_state[cur_index]);
-                    },
-                    _ => panic!("Unknown instruction:{}", instruction),
-                }
-            }
-
-            if cur.chars().last().unwrap() == 'Z' {
-                if done_steps[cur_index] == 0 {
-                    done_steps[cur_index] = steps;
-                }
+            match instruction {
+                'L' => {
+                    cur = left;
+                    //println!("left:{}", cur_state[cur_index]);
+                },
+                'R' => {
+                    cur = right;
+                    //println!("right:{}", cur_state[cur_index]);
+                },
+                _ => panic!("Unknown instruction:{}", instruction),
             }
         }
+
+        done_steps.push(steps);
     }
 
-    //println!("Steps:{}", steps);
     println!("done_steps:{:?}", done_steps);
+
+    let mut count = 1;
+    while !check_end_condition(&done_steps, done_steps[0] * count) {
+        count += 1;
+    }
+
+    println!("Steps:{}", count * done_steps[0]);
 }
