@@ -135,7 +135,7 @@ fn get_next(cur: &Node, direction: &Direction, map: &Vec<Vec<char>>) -> Node {
     let directions = get_directions_for_pipe(cur);
     let from_dir = HashSet::from([*direction]);
 
-    println!("cur:{:?} directions:{:?} from_dir:{:?}", cur, directions, from_dir);
+    //println!("cur:{:?} directions:{:?} from_dir:{:?}", cur, directions, from_dir);
 
     let to_dir: Vec<Direction> = directions.difference(&from_dir).copied().collect();
     if to_dir.len() != 1 {
@@ -161,6 +161,101 @@ fn get_next(cur: &Node, direction: &Direction, map: &Vec<Vec<char>>) -> Node {
     }
 
     Node::new(map[row][col], row, col)
+}
+
+fn is_adjacent(row: usize, col: usize, done: &HashSet<(usize,usize)>, on_path: &HashSet<(usize,usize)>) -> bool {
+    if !on_path.contains(&(row, col)) && !done.contains(&(row, col)) {
+        true
+    } else {
+        false
+    }
+}
+
+fn find_adjacents(height: usize, width: usize, row: usize, col: usize, blob: &mut Vec<(usize, usize)>, done: &mut HashSet<(usize, usize)>, on_path: &HashSet<(usize, usize)>) {
+    if !done.contains(&(row, col)) {
+        done.insert((row, col));
+        blob.push((row, col));
+        //up
+        if row > 0 {
+            if is_adjacent(row - 1, col, done, on_path) {
+                find_adjacents(height, width, row - 1, col, blob, done, on_path);
+            }
+        }
+
+        //down
+        if row < (height - 1) {
+            if is_adjacent(row + 1, col, done, on_path) {
+                find_adjacents(height, width, row + 1, col, blob, done, on_path);
+            }
+        }
+
+        //left
+        if col > 0 {
+            if is_adjacent(row, col - 1, done, on_path) {
+                find_adjacents(height, width, row, col - 1, blob, done, on_path);
+            }
+        }
+
+        //right
+        if col < (width - 1) {
+            if is_adjacent(row, col + 1, done, on_path) {
+                find_adjacents(height, width, row, col + 1, blob, done, on_path);
+            }
+        }
+    }
+}
+
+fn flood_fill(width: usize, height: usize, map: &Vec<Vec<char>>, path: &Vec<Node>) -> Vec<Vec<(usize,usize)>> {
+    let mut blobs: Vec<Vec<(usize,usize)>> = Vec::new();
+    let mut on_path: HashSet<(usize, usize)> = HashSet::new();
+
+    for n in path.iter() {
+        on_path.insert((n.row, n.col));
+    }
+
+    let mut done: HashSet<(usize, usize)> = HashSet::new();
+    for y in 0..height {
+        for x in 0..width {
+            //Make sure this node isn't part of the path
+            if !on_path.contains(&(y,x)) {
+                if !done.contains(&(y,x)) { //We haven't seen this before
+                    let mut blob = Vec::new();
+                    find_adjacents(height, width, y, x, &mut blob, &mut done, &on_path);
+                    blobs.push(blob);
+                }
+            }
+        }
+    }
+
+    blobs
+}
+
+fn print_map(map: &Vec<Vec<char>>) {
+    for l in map.iter() {
+        for c in l.iter() {
+            print!("{}", c);
+        }
+        println!("");
+    }
+}
+
+fn overlay_blobs_onto_map(map: &Vec<Vec<char>>, blobs: &Vec<Vec<(usize, usize)>>) -> Vec<Vec<char>> {
+    let mut new_map = Vec::new();
+
+    for l in map {
+        new_map.push(l.clone());
+    }
+
+    let mut asdf = 65;
+    for b in blobs.iter() {
+        let c = char::from_u32(asdf).unwrap();
+        asdf += 1;
+        for (row, col) in b.iter() {
+            new_map[*row][*col] = c;
+        }
+    }
+
+    new_map
 }
 
 fn main() {
@@ -196,7 +291,7 @@ fn main() {
             None => (),
         }
     }
-    println!("row:{}, col:{} found:{}", start_row, start_col, found);
+    //println!("row:{}, col:{} found:{}", start_row, start_col, found);
     if !found {
         panic!("failed to find start");
     }
@@ -217,9 +312,13 @@ fn main() {
         cur_index += 1;
     }
 
-    println!("path:{:?}", path);
+    //println!("path:{:?}", path);
+    let blobs = flood_fill(width, height, &map, &path);
+    println!("blobs:{:?}", blobs);
 
-    let count: f64 = path.len() as f64 - 2.0;
-    let mid = (count / 2.0).ceil();
-    println!("mid:{}", mid);
+    let new_map = overlay_blobs_onto_map(&map, &blobs);
+
+    print_map(&map);
+    print_map(&new_map);
+
 }
